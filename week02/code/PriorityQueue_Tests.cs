@@ -4,6 +4,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class PriorityQueueTests
 {
     [TestMethod]
+    // Scenario: Dequeue from an empty priority queue.
+    // Expected Result: Throws InvalidOperationException.
+    // Defect(s) Found: None.
     public void TestPriorityQueue_Empty()
     {
         PriorityQueue queue = new PriorityQueue();
@@ -11,6 +14,9 @@ public class PriorityQueueTests
     }
 
     [TestMethod]
+    // Scenario: Enqueue one item with priority 1, dequeue it, and check length.
+    // Expected Result: Dequeues "Task1", length is 0.
+    // Defect(s) Found: Missing Length property (fixed).
     public void TestPriorityQueue_SingleItem()
     {
         PriorityQueue queue = new PriorityQueue();
@@ -20,6 +26,9 @@ public class PriorityQueueTests
     }
 
     [TestMethod]
+    // Scenario: Enqueue three items with same priority (1) and dequeue in order.
+    // Expected Result: Dequeues in FIFO order: Task1, Task2, Task3.
+    // Defect(s) Found: None.
     public void TestPriorityQueue_SamePriorityFIFO()
     {
         PriorityQueue queue = new PriorityQueue();
@@ -33,6 +42,9 @@ public class PriorityQueueTests
     }
 
     [TestMethod]
+    // Scenario: Enqueue three items with different priorities (3, 1, 2) and dequeue.
+    // Expected Result: Dequeues in priority order: HighPriority (1), MediumPriority (2), LowPriority (3).
+    // Defect(s) Found: None.
     public void TestPriorityQueue_DifferentPriorities()
     {
         PriorityQueue queue = new PriorityQueue();
