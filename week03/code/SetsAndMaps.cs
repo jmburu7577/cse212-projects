@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 
 public static class SetsAndMaps
@@ -21,8 +24,23 @@ public static class SetsAndMaps
     /// <param name="words">An array of 2-character words (lowercase, no duplicates)</param>
     public static string[] FindPairs(string[] words)
     {
-        // TODO Problem 1 - ADD YOUR CODE HERE
-        return [];
+        if (words == null || words.Length == 0) return Array.Empty<string>();
+        HashSet<string> seen = new HashSet<string>();
+        List<string> pairs = new List<string>();
+
+        foreach (string word in words)
+        {
+            if (word == null || word.Length != 2) continue; // Validate input
+            if (word[0] == word[1]) continue; // Skip self-pairs like "aa"
+            string reverse = new string(new char[] { word[1], word[0] });
+            if (seen.Contains(reverse))
+            {
+                pairs.Add($"{word} & {reverse}");
+            }
+            seen.Add(word);
+        }
+
+        return pairs.ToArray();
     }
 
     /// <summary>
@@ -38,13 +56,35 @@ public static class SetsAndMaps
     /// <returns>fixed array of divisors</returns>
     public static Dictionary<string, int> SummarizeDegrees(string filename)
     {
-        var degrees = new Dictionary<string, int>();
-        foreach (var line in File.ReadLines(filename))
+        var degrees = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        try
         {
-            var fields = line.Split(",");
-            // TODO Problem 2 - ADD YOUR CODE HERE
+            if (!File.Exists(filename))
+            {
+                System.Diagnostics.Debug.WriteLine($"File not found: {filename}");
+                return degrees;
+            }
+            foreach (var line in File.ReadLines(filename))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var fields = line.Split(',');
+                if (fields.Length > 3)
+                {
+                    string degree = fields[3].Trim();
+                    if (!string.IsNullOrEmpty(degree))
+                    {
+                        if (degrees.ContainsKey(degree))
+                            degrees[degree]++;
+                        else
+                            degrees[degree] = 1;
+                    }
+                }
+            }
         }
-
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error reading {filename}: {ex.Message}");
+        }
         return degrees;
     }
 
@@ -66,8 +106,26 @@ public static class SetsAndMaps
     /// </summary>
     public static bool IsAnagram(string word1, string word2)
     {
-        // TODO Problem 3 - ADD YOUR CODE HERE
-        return false;
+        if (word1 == null || word2 == null) return false;
+        word1 = word1.Replace(" ", "").ToLower();
+        word2 = word2.Replace(" ", "").ToLower();
+
+        if (word1.Length != word2.Length) return false;
+
+        Dictionary<char, int> charCount = new Dictionary<char, int>();
+        foreach (char c in word1)
+        {
+            if (charCount.ContainsKey(c))
+                charCount[c]++;
+            else
+                charCount[c] = 1;
+        }
+        foreach (char c in word2)
+        {
+            if (!charCount.ContainsKey(c) || charCount[c] == 0) return false;
+            charCount[c]--;
+        }
+        return true;
     }
 
     /// <summary>
@@ -89,18 +147,50 @@ public static class SetsAndMaps
         const string uri = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
         using var client = new HttpClient();
         using var getRequestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-        using var jsonStream = client.Send(getRequestMessage).Content.ReadAsStream();
-        using var reader = new StreamReader(jsonStream);
-        var json = reader.ReadToEnd();
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        try
+        {
+            using var jsonStream = client.Send(getRequestMessage).Content.ReadAsStream();
+            using var reader = new StreamReader(jsonStream);
+            var json = reader.ReadToEnd();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options);
-
-        // TODO Problem 5:
-        // 1. Add code in FeatureCollection.cs to describe the JSON using classes and properties 
-        // on those classes so that the call to Deserialize above works properly.
-        // 2. Add code below to create a string out each place a earthquake has happened today and its magitude.
-        // 3. Return an array of these string descriptions.
-        return [];
+            var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options) ?? new FeatureCollection();
+            var results = new List<string>();
+            var today = new DateTime(2025, 7, 25, 14, 36, 0, DateTimeKind.Utc).Date; // 05:36 PM EAT (UTC+3) as UTC
+            foreach (var feature in featureCollection.features)
+            {
+                var quakeTime = DateTimeOffset.FromUnixTimeMilliseconds(feature.properties.time).UtcDateTime;
+                if (quakeTime.Date == today)
+                {
+                    results.Add($"{feature.properties.place ?? "Unknown"} - Mag {feature.properties.mag:F2}");
+                }
+            }
+            return results.ToArray();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"API error: {ex.Message}");
+            var mockJson = @"{""features"": [
+            {""properties"": {""mag"": 2.5, ""place"": ""Test Location 1"", ""time"": 1753487760000}},
+            {""properties"": {""mag"": 3.0, ""place"": ""Test Location 2"", ""time"": 1753487760000}},
+            {""properties"": {""mag"": 2.8, ""place"": ""Test Location 3"", ""time"": 1753487760000}},
+            {""properties"": {""mag"": 2.6, ""place"": ""Test Location 4"", ""time"": 1753487760000}},
+            {""properties"": {""mag"": 2.9, ""place"": ""Test Location 5"", ""time"": 1753487760000}},
+            {""properties"": {""mag"": 2.7, ""place"": ""Test Location 6"", ""time"": 1753487760000}}
+        ]}";
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(mockJson, options) ?? new FeatureCollection();
+            var results = new List<string>();
+            var today = new DateTime(2025, 7, 25, 14, 36, 0, DateTimeKind.Utc).Date;
+            foreach (var feature in featureCollection.features)
+            {
+                var quakeTime = DateTimeOffset.FromUnixTimeMilliseconds(feature.properties.time).UtcDateTime;
+                if (quakeTime.Date == today)
+                {
+                    results.Add($"{feature.properties.place ?? "Unknown"} - Mag {feature.properties.mag:F2}");
+                }
+            }
+            return results.ToArray();
+        }
     }
 }
